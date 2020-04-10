@@ -1,17 +1,24 @@
-use sysinfo::{ProcessExt, System, SystemExt, Signal, Process};
+use clap::{App, Arg};
 use std::{thread, time};
 use std::process::exit;
-use clap::{App, Arg};
+use sysinfo::{ProcessExt, System, SystemExt, Signal, Process};
 
 fn main() {
     let matches = App::new("process-killer")
-        .version("0.1.0")
+        .version("0.2.0")
         .about("A simple utility for for terminating processes quickly and cleanly.")
         .arg(Arg::with_name("process-name-substring")
                  .help("All processes that contain this substring will be killed. Case insensitive.")
                  .index(1)
                  .required(true))
-        .get_matches();
+        .arg(Arg::with_name("wait-ms")
+                .help("How many milliseconds to wait for the processes to gracefully terminate before force killing them.")
+                .takes_value(true)
+                .long("wait-ms")
+                .short("w")
+                .default_value("3000")
+            )
+                .get_matches();
     let pattern = matches
         .value_of("process-name-substring")
         .expect("Error while getting process-name-substring.");
@@ -19,6 +26,13 @@ fn main() {
         eprintln!("Pattern should not be empty.");
         exit(-1);
     }
+
+    let wait_ms: u64 = matches
+        .value_of("wait-ms")
+        .expect("Error while getting the value of wait-ms.")
+        .parse()
+        .expect("Wait_ms was not a number");
+
     let s = System::new_all();
     let matching: Vec<&Process> = s.get_processes()
         .iter()
@@ -43,12 +57,15 @@ fn main() {
         .for_each(|process| { process.kill(Signal::Term); });
     thread::sleep(time::Duration::from_millis(100));
 
-    for _ in 1..7 {
+    // We're doing waiting in 100ms steps so that we can exit as soon as the
+    // processes terminate.
+    let max_wait_steps = wait_ms / 100;
+    for _ in 1..(max_wait_steps + 1) {
         if get_alive_processes(&matching, &System::new()).len() == 0 {
             exit(0);
         }
 
-        thread::sleep(time::Duration::from_millis(500));
+        thread::sleep(time::Duration::from_millis(wait_ms / max_wait_steps));
     }
 
 
