@@ -1,17 +1,23 @@
 use sysinfo::{ProcessExt, System, SystemExt, Signal, Process};
 use std::{thread, time};
 use std::process::exit;
-
-use std::env;
+use clap::{App, Arg};
 
 fn main() {
-    let pattern = env::args()
-        .skip(1)
-        .next()
-        .expect("Pattern not provided")
-        .to_lowercase();
+    let matches = App::new("process-killer")
+        .version("0.1.0")
+        .about("A simple utility for for terminating processes quickly and cleanly.")
+        .arg(Arg::with_name("process-name-substring")
+                 .help("All processes that contain this substring will be killed. Case insensitive.")
+                 .index(1)
+                 .required(true))
+        .get_matches();
+    let pattern = matches
+        .value_of("process-name-substring")
+        .expect("Error while getting process-name-substring.");
     if pattern == "" {
-        panic!("No pattern provided");
+        eprintln!("Pattern should not be empty.");
+        exit(-1);
     }
     let s = System::new_all();
     let matching: Vec<&Process> = s.get_processes()
@@ -21,9 +27,14 @@ fn main() {
         .collect();
     matching
         .iter()
-        .for_each(|process| println!("pid: {}, process: {:?}, status: {}", process.pid(), process.name(), process.status()));
+        .for_each(|process| {
+                      println!("pid: {}, process: {:?}, status: {}",
+                               process.pid(),
+                               process.name(),
+                               process.status())
+                  });
     if matching.len() == 0 {
-        println!("No processes found");
+        eprintln!("No processes found");
         exit(-1);
     }
     println!("\nKilling processes with sigterm");

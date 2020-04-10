@@ -9,3 +9,4 @@ license = "Apache-2.0"
 
 [dependencies]
 sysinfo = "0.13.1"               # Library to get system information such as processes, processors, disks, components and network…
+clap = "~2.33.0"                  # A simple to use, efficient, and full-featured Command Line Argument Parser
