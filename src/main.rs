@@ -1,4 +1,5 @@
 use clap::{App, Arg};
+use regex::{Regex, RegexBuilder};
 use std::{thread, time};
 use std::process::exit;
 use sysinfo::{ProcessExt, System, SystemExt, Signal, Process};
@@ -7,8 +8,8 @@ fn main() {
     let matches = App::new("process-killer")
         .version("0.2.1")
         .about("A simple utility for for terminating processes quickly and cleanly.")
-        .arg(Arg::with_name("process-name-substring")
-                 .help("All processes that contain this substring will be killed. Case insensitive.")
+        .arg(Arg::with_name("pattern")
+                 .help("All processes that contain this pattern will be killed. Case insensitive.")
                  .index(1)
                  .required(true))
         .arg(Arg::with_name("wait-ms")
@@ -18,14 +19,20 @@ fn main() {
                 .short("w")
                 .default_value("3000")
             )
+        .arg(Arg::with_name("regex")
+                .help("Interpret the pattern as a regular expression")
+                .long("regex")
+                .short("r"))
                 .get_matches();
     let pattern = matches
-        .value_of("process-name-substring")
-        .expect("Error while getting process-name-substring.");
+        .value_of("pattern")
+        .expect("Error while getting pattern.");
     if pattern == "" {
         eprintln!("Pattern should not be empty.");
         exit(-1);
     }
+
+    let regular_expression = matches.is_present("regex");
 
     let wait_ms: u64 = matches
         .value_of("wait-ms")
@@ -34,11 +41,23 @@ fn main() {
         .expect("Wait_ms was not a number");
 
     let s = System::new_all();
-    let matching: Vec<&Process> = s.get_processes()
-        .iter()
-        .map(|(_pid, process)| process)
-        .filter(|process| process.name().to_lowercase().contains(&pattern))
-        .collect();
+
+    let processes_iterator = s.get_processes().iter().map(|(_pid, process)| process);
+
+    let matching: Vec<&Process> = if regular_expression {
+        let regex: Regex = RegexBuilder::new(pattern)
+            .case_insensitive(true)
+            .build()
+            .expect("Regular expression was not valid");
+        processes_iterator
+            .filter(|process| regex.is_match(process.name()))
+            .collect()
+    } else {
+        processes_iterator
+            .filter(|process| process.name().to_lowercase().contains(&pattern))
+            .collect()
+    };
+
     matching
         .iter()
         .for_each(|process| {

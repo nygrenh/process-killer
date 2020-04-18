@@ -12,10 +12,11 @@ Download binary from Github Actions artifacts. Only Linux binaries are provided 
 
 ```
 USAGE:
-    process-killer [OPTIONS] <process-name-substring>
+    process-killer [FLAGS] [OPTIONS] <pattern>
 
 FLAGS:
     -h, --help       Prints help information
+    -r, --regex      Interpret the pattern as a regular expression
     -V, --version    Prints version information
 
 OPTIONS:
@@ -23,5 +24,5 @@ OPTIONS:
                                before force killing them. [default: 3000]
 
 ARGS:
-    <process-name-substring>    All processes that contain this substring will be killed. Case insensitive.
+    <pattern>    All processes that contain this pattern will be killed. Case insensitive.
 ```
