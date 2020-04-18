@@ -5,7 +5,7 @@ use sysinfo::{ProcessExt, System, SystemExt, Signal, Process};
 
 fn main() {
     let matches = App::new("process-killer")
-        .version("0.2.0")
+        .version("0.2.1")
         .about("A simple utility for for terminating processes quickly and cleanly.")
         .arg(Arg::with_name("process-name-substring")
                  .help("All processes that contain this substring will be killed. Case insensitive.")
@@ -83,7 +83,7 @@ fn main() {
     matching
         .iter()
         .for_each(|process| { process.kill(Signal::Kill); });
-    thread::sleep(time::Duration::from_secs(1));
+    thread::sleep(time::Duration::from_millis(1));
 }
 
 fn get_alive_processes<'a>(processes: &Vec<&'a Process>, system: &'a System) -> Vec<&'a Process> {
