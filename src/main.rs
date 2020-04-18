@@ -6,10 +6,10 @@ use sysinfo::{ProcessExt, System, SystemExt, Signal, Process};
 
 fn main() {
     let matches = App::new("process-killer")
-        .version("0.2.1")
+        .version("0.3.0")
         .about("A simple utility for for terminating processes quickly and cleanly.")
         .arg(Arg::with_name("pattern")
-                 .help("All processes that contain this pattern will be killed. Case insensitive.")
+                 .help("All processes that contain this pattern will be killed. Case insensitive by default.")
                  .index(1)
                  .required(true))
         .arg(Arg::with_name("wait-ms")
@@ -23,6 +23,10 @@ fn main() {
                 .help("Interpret the pattern as a regular expression")
                 .long("regex")
                 .short("r"))
+        .arg(Arg::with_name("case-sensitive")
+                .help("Make pattern to be case sensitive")
+                .long("case-sensitive")
+                .short("c"))
                 .get_matches();
     let pattern = matches
         .value_of("pattern")
@@ -33,6 +37,7 @@ fn main() {
     }
 
     let regular_expression = matches.is_present("regex");
+    let case_sensitive = matches.is_present("case-sensitive");
 
     let wait_ms: u64 = matches
         .value_of("wait-ms")
@@ -46,7 +51,7 @@ fn main() {
 
     let matching: Vec<&Process> = if regular_expression {
         let regex: Regex = RegexBuilder::new(pattern)
-            .case_insensitive(true)
+            .case_insensitive(!case_sensitive)
             .build()
             .expect("Regular expression was not valid");
         processes_iterator
@@ -54,7 +59,15 @@ fn main() {
             .collect()
     } else {
         processes_iterator
-            .filter(|process| process.name().to_lowercase().contains(&pattern))
+            .filter(|process| {
+                let mut name: String = process.name().to_string();
+                let mut filter_pattern = pattern.to_string();
+                if !case_sensitive {
+                    name = name.to_lowercase();
+                    filter_pattern = filter_pattern.to_lowercase();
+                }
+                return name.contains(&filter_pattern);
+            })
             .collect()
     };
 
